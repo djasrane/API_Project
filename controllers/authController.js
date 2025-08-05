@@ -1,53 +1,62 @@
-
-// Importation des modules nécessaires
-
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const sendEmail = require('../utils/sendEmail');
 
-const createToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, {
-  expiresIn: process.env.JWT_EXPIRES_IN
-});
+// Crée un token JWT
+const createToken = (id) =>
+  jwt.sign({ id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '1d',
+  });
 
 
-exports.register = async (req, res) => {
-  const { name, email, password } = req.body;
+// Vérifie l'OTP pour confirmation email
+exports.verifyOtp = async (req, res) => {
+  const { email, otp } = req.body;
+
   try {
-    const userExists = await User.findOne({ email });
-    if (userExists) return res.status(400).json({ message: 'Utilisateur existe déjà' });
+    const user = await User.findOne({ email });
+    if (!user)
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
 
-    const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashed });
+    if (
+      user.otp !== otp ||
+      user.otpExpire < Date.now() ||
+      user.otpPurpose !== 'email_verification'
+    ) {
+      return res.status(400).json({ message: 'OTP invalide ou expiré' });
+    }
 
-    const token = createToken(user._id);
-    const confirmationLink = `${process.env.CLIENT_URL}/confirm/${token}`;
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpire = undefined;
+    user.otpPurpose = undefined;
+    await user.save();
 
-    await sendEmail(email, 'Confirmer votre compte', `<a href="${confirmationLink}">Veuillez confirmer</a>`);
-    
-    res.status(201).json({ message: 'Inscription réussie, vérifiez votre email' });
+    res.json({ message: 'Email vérifié avec succès' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
+// Mise à jour du mot de passe
+exports.updatePassword = async (req, res) => {
+  const userId = req.user.id; // Assurez-vous que req.user existe via un middleware auth
+  const { oldPassword, newPassword } = req.body;
 
-// Fonction pour connecter un utilisateur
-
-exports.login = async (req, res) => {
-  const { email, password } = req.body;
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findById(userId);
     if (!user)
-      return res.status(400).json({ message: 'Utilisateur non trouvé' });
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
 
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(400).json({ message: 'Mot de passe incorrect' });
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch)
+      return res.status(400).json({ message: 'Ancien mot de passe incorrect' });
 
-    if (!user.isVerified)
-      return res.status(403).json({ message: 'Veuillez confirmer votre email' });
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
 
-    const token = createToken(user._id);
-    res.json({ token });
+    res.json({ message: 'Mot de passe mis à jour avec succès' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -1,25 +1,31 @@
-
 const express = require('express');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
+const authRoutes = require('./routes/authRoutes');
+
 dotenv.config();
 
+const app = express();
 
+// Middleware pour parser le JSON
+app.use(express.json());
+
+// Connexion à MongoDB
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log("Connected to database successfully.");
   })
   .catch((error) => {
-    console.log("Connection to database failed:::", error);
+    console.error("Connection to database failed:", error);
   });
 
-const schema = mongoose.Schema({
+// Définition du schéma Product 
+const productSchema = new mongoose.Schema({
   productName: {
     type: String,
     required: true,
   },
-  //backend ajouter un utilisateur backend ajouter un utilisateur 
   price: {
     type: Number,
     required: true,
@@ -30,13 +36,13 @@ const schema = mongoose.Schema({
     default: "in-stock",
   },
 });
+const productModel = mongoose.model("products", productSchema);
 
-const productModel = mongoose.model("products", schema);
+// Routes avec préfixe
+app.use('/api/auth', authRoutes);
 
-const app = express();
-app.use(express.json());
-
-app.use('/api/auth', require('./routes/authRoutes'));
-
+// Démarrage serveur
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Serveur démarré sur le port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Serveur démarré sur le port ${PORT}`);
+});
