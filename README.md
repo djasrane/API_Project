@@ -22,7 +22,7 @@ Cette API REST permet d’authentifier les utilisateurs à l’aide de **JWT (JS
 - **bcryptjs**
 - **nodemailer**
 - **dotenv**
-- **Postman**
+- **Thunder Client**
 
 ## Structure du projet
 
@@ -71,7 +71,7 @@ auther/
 ##  Installation et démarrage
 
 ```bash
-git clone git@github.com:djasrane/Projet_API.git
+git clone git@github.com:djasrane/API_Project.git
 cd Projet_API
 npm install
 npm start
@@ -93,18 +93,18 @@ Ce dossier regroupe les **contrôleurs essentiels** à la gestion de l'authentif
 
 ### 📁 Fichier : `authController.js`
 
-### 📌 1. `registerUser(req, res)`
+### 📌 1. `register(req, res)`
 - Enregistre un nouvel utilisateur avec validation des données
 - Hachage sécurisé du mot de passe via `bcrypt`
 - Envoie un email de confirmation avec `nodemailer`
 - Retourne un message de succès ou d’erreur
 
-### 📌 2. `loginUser(req, res)`
+### 📌 2. `login(req, res)`
 - Vérifie les identifiants
 - Génère et retourne un **JWT**
 - Permet l’accès aux routes protégées
 
-### 📌 3. `sendConfirmationEmail(req, res)`
+### 📌 3. `sendEmail(req, res)`
 - Utilise `nodemailer` pour envoyer un mail de confirmation
 - Peut inclure un lien ou un code d’activation
 
